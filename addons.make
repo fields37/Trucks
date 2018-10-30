@@ -1,0 +1,2 @@
+ofxCoreMotion-master
+ofxGPS
