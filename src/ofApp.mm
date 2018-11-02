@@ -1,5 +1,6 @@
 #include "ofApp.h"
 
+
 //--------------------------------------------------------------
 void ofApp::setup(){
     // Setup framerate and background
@@ -17,20 +18,28 @@ void ofApp::setup(){
     // Setup accelerometer
     coreMotion.setupAccelerometer();
     coreMotion.setupAttitude(CMAttitudeReferenceFrameXMagneticNorthZVertical);
-    accelSamples = 10;
-    //accelValues.assign(accelSamples, 0.0f);
+    accelSamples = 100;
+    accelThreshold = 0.03f;
+    accelValues.assign(accelSamples, 0.0f);
     
     // Load in the audio
     testSound.load("Chris_01.mp3");
     testSound.setVolume(1.0f);
-    testSound.play();
+    //testSound.play();
+    
+    // Initialize location tracking
+    //ofxGPS::startLocation();
+    ofLog(OF_LOG_NOTICE, "setup");
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
+    ofLog(OF_LOG_NOTICE, ofToString(testSound.isPlaying()));
+    ofLog(OF_LOG_NOTICE, ofToString(checkAcceleration()));
     if (checkAcceleration()){
-        
+        if (!testSound.isPlaying()) startPlayingSound("");
     }
+    else if (testSound.isPlaying()) stopPlayingSound("");
 }
 
 //--------------------------------------------------------------
@@ -43,24 +52,31 @@ void ofApp::draw(){
 bool ofApp::checkAcceleration(){
     // Update IMU readings
     coreMotion.update();
-    ofVec3f accel = coreMotion.getAccelerometerData();
+    ofVec3f accel = coreMotion.getUserAcceleration();
     
-    // Update samples and average
-//    for (int i = 1; i < accelValues.size(); i++){
-//        accelValues[i - 1] = accelValues[i];
-//    }
-//    accelValues[accelValues.size() - 1] = accel.length();
-    //float average = std::accumulate(accelValues.begin(), accelValues.end(), 0) / accelValues.size();
+    //Update samples and average
+    for (int i = 1; i < accelValues.size(); i++){
+        accelValues[i - 1] = accelValues[i];
+    }
+    accelValues[accelValues.size() - 1] = accel.length();
+    float average = std::accumulate(accelValues.begin(), accelValues.end(), 0) / (float)accelValues.size();
     
     
-    //aText = "Acceleration: " + ofToString(average);
-    return false;
+    aText = "Acceleration: " + ofToString(average);
+    return average > accelThreshold;
 }
 
 // Play the specified audio file
-void ofApp::playSound(string filename){
-    testSound.stop();
+void ofApp::startPlayingSound(string filename){
+    // Note: on iPhone, audio seems to play through wired headphones, but not Bluetooth
+    ofLog(OF_LOG_NOTICE, "starting");
     testSound.play();
+}
+
+// Stop playing the current sound file
+void ofApp::stopPlayingSound(string filename){
+    ofLog(OF_LOG_NOTICE, "ending");
+    testSound.stop();
 }
 
 //--------------------------------------------------------------
@@ -112,3 +128,4 @@ void ofApp::gotMemoryWarning(){
 void ofApp::deviceOrientationChanged(int newOrientation){
 
 }
+

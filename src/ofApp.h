@@ -2,6 +2,7 @@
 
 #include "ofxiOS.h"
 #include "ofxCoreMotion.h"
+#include "ofxGPSImpliOS.h"
 
 class ofApp : public ofxiOSApp {
 	
@@ -23,7 +24,8 @@ class ofApp : public ofxiOSApp {
         void deviceOrientationChanged(int newOrientation);
     
         bool checkAcceleration();
-        void playSound(string filename);
+        void startPlayingSound(string filename);
+        void stopPlayingSound(string filename);
     
         ofxCoreMotion coreMotion;
         ofTrueTypeFont mainFont;
@@ -32,6 +34,7 @@ class ofApp : public ofxiOSApp {
         ofSoundPlayer testSound;
         vector<float> accelValues;
         int accelSamples;
+        float accelThreshold;
 };
 
 
