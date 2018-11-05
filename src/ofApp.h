@@ -26,6 +26,7 @@ class ofApp : public ofxiOSApp {
         bool checkAcceleration();
         void startPlayingSound(string filename);
         void stopPlayingSound(string filename);
+        void handleAudioLerp();
     
         ofxCoreMotion coreMotion;
         ofTrueTypeFont mainFont;
