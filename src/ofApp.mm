@@ -3,6 +3,9 @@
 // Stores the system time, in seconds, when the program began execution
 double startTime;
 
+// The ofSoundPlayer playing the different sound files
+ofSoundPlayer soundPlayer;
+
 //--------------------------------------------------------------
 void ofApp::setup(){
     // Setup framerate and background
@@ -25,9 +28,11 @@ void ofApp::setup(){
     accelValues.assign(accelSamples, 0.0f);
     
     // Load in the audio
-    testSound.load("Chris_01.mp3");
-    testSound.setVolume(1.0f);
-    //testSound.play();
+    findAudioClips();
+    loadNextClip();
+    soundPlayer.setVolume(1.0f);
+    soundPlayer.setLoop(false);
+    //soundPlayer.play();
     
     // Initialize location tracking
     //ofxGPS::startLocation();
@@ -42,12 +47,19 @@ bool lerping = false;
 
 //--------------------------------------------------------------
 void ofApp::update(){
+    if (soundPlayer.getPosition() >= 0.99){
+        ofSleepMillis(10000);
+        ofLog(OF_LOG_NOTICE, "next");
+        loadNextClip();
+    }
+    
+    // Find the current acceleration, handle ramp-ups and downs, start or stop audio if necessary
     checkAcceleration();
     if (lerping) handleAudioLerp();
     else if (checkAcceleration()){
-        if (!testSound.isPlaying()) startPlayingSound("");
+        if (!soundPlayer.isPlaying()) startPlayingSound("");
     }
-    else if (testSound.isPlaying()) stopPlayingSound("");
+    else if (soundPlayer.isPlaying()) stopPlayingSound("");
 }
 
 //--------------------------------------------------------------
@@ -94,19 +106,22 @@ float lerpStartTime;
 
 // Play the specified audio file
 void ofApp::startPlayingSound(string filename){
+    // Make the soundPlayer go back by 2 * audioLerpTime seconds
+    soundPlayer.setPositionMS(MAX(0, soundPlayer.getPosition() - (2000 * audioLerpTime)));
+    
     // Setup the audio ramp-up, start playing
     // Note: on iPhone, audio seems to play through wired headphones, but not Bluetooth
-    testSound.setVolume(audioLerpMin);
+    soundPlayer.setVolume(audioLerpMin);
     lerping = true;
     lerpingUp = true;
     lerpStartTime = ofGetElapsedTimef();
-    testSound.play();
+    soundPlayer.play();
 }
 
 // Stop playing the current sound file
 void ofApp::stopPlayingSound(string filename){
     // Setup the audio ramp-down
-    testSound.setVolume(audioLerpMax);
+    soundPlayer.setVolume(audioLerpMax);
     lerping = true;
     lerpingUp = false;
     lerpStartTime = ofGetElapsedTimef();
@@ -119,26 +134,60 @@ void ofApp::handleAudioLerp(){
     if (lerpingUp){
         // Check if interpolation is finished
         if (ofGetElapsedTimef() - lerpStartTime > audioLerpTime){
-            testSound.setVolume(audioLerpMax);
+            soundPlayer.setVolume(audioLerpMax);
             lerping = false;
         }
         // Otherwise set current value
-        else testSound.setVolume(ofLerp(audioLerpMin, audioLerpMax,
+        else soundPlayer.setVolume(ofLerp(audioLerpMin, audioLerpMax,
                                         (ofGetElapsedTimef() - lerpStartTime) / audioLerpTime));
     }
     // Case stopping audio play
     else{
         // Check if interpolation is finished
         if (ofGetElapsedTimef() - lerpStartTime > audioLerpTime){
-            testSound.setVolume(0);
+            soundPlayer.setVolume(0);
             lerping = false;
-            testSound.stop();
+            soundPlayer.stop();
         }
         // Otherwise set current value
-        else testSound.setVolume(ofLerp(audioLerpMax, audioLerpMin,
+        else soundPlayer.setVolume(ofLerp(audioLerpMax, audioLerpMin,
                                         (ofGetElapsedTimef() - lerpStartTime) / audioLerpTime));
     }
 }
+
+// Whether or not to shuffle the audio clips
+bool shuffleClips = false;
+// Directory holding the audio clips,
+static string audioPath = "Clips/";
+static string statePath = "userstate.txt";
+ofDirectory directory;
+// Index of next clip to be loaded
+int clipIndex = 0;
+vector<ofFile> audioFiles;
+
+// Read in the name of all the audio clips in the selected directory
+void ofApp::findAudioClips(){
+    // Restrict the relevant files to .mp3's, sort alphabetically
+    directory.allowExt("mp3");
+    directory.listDir(audioPath);
+    directory.sort();
+    // Populate the list of files
+    audioFiles = directory.getFiles();
+    if (shuffleClips){
+        ofLog(OF_LOG_NOTICE, "randomizing");
+        ofRandomize(audioFiles);
+    }
+    //ofLog(OF_LOG_NOTICE, ofToString(audioFiles.size()));
+}
+
+// Load the currently indexed clip into the ofSoundPlayer
+// Advance the audio clip index
+void ofApp::loadNextClip(){
+    soundPlayer.load(audioFiles[clipIndex].getAbsolutePath());
+    clipIndex = (clipIndex + 1) % audioFiles.size();
+    ofLog(OF_LOG_NOTICE, ofToString(clipIndex));
+}
+
 
 //--------------------------------------------------------------
 void ofApp::exit(){

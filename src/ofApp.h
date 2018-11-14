@@ -28,11 +28,13 @@ class ofApp : public ofxiOSApp {
         void stopPlayingSound(string filename);
         void handleAudioLerp();
     
+        void findAudioClips();
+        void loadNextClip();
+    
         ofxCoreMotion coreMotion;
         ofTrueTypeFont mainFont;
         string aText;
     
-        ofSoundPlayer testSound;
         vector<float> accelValues;
         int accelSamples;
         float accelThreshold;
